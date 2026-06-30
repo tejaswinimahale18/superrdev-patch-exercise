@@ -8,17 +8,31 @@ export function useTasks(query, status, page, pageSize) {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    let isMounted = true;
     setLoading(true);
+    setError(null);
 
-    fetchTasks({ query, status, page, pageSize })
-      .then((data) => {
-        setTasks(data.items);
-        setTotal(data.total);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(err.message);
-      });
+    const delayDebounce = setTimeout(() => {
+      fetchTasks({ query, status, page, pageSize })
+        .then((data) => {
+          if (isMounted) {
+            setTasks(data.items || []);
+            setTotal(data.total || 0);
+            setLoading(false);
+          }
+        })
+        .catch((err) => {
+          if (isMounted) {
+            setError(err.message);
+            setLoading(false);
+          }
+        });
+    }, 500);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(delayDebounce);
+    };
   }, [query, status, page, pageSize]);
 
   return { tasks, total, loading, error };
